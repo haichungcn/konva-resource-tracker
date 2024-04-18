@@ -1,3 +1,5 @@
+import Konva from "konva";
+
 export const calculateOptimalScaleRatio = (
   containerWidth: number,
   containerHeight: number,
@@ -32,3 +34,37 @@ export const generateSmallestDimension = (
     height: initialHeight,
   };
 };
+
+export const findNodes = (
+  stage: Konva.Stage | null,
+  determineNode: (node: Konva.Node) => boolean,
+) => {
+  if (!stage) return [];
+
+  let result: Konva.Node[] = [];
+  const stageChildren = stage.children;
+
+  for (const node of stageChildren) {
+    if (node.getClassName() === "Layer") {
+      const childNodes = node.getChildren(determineNode);
+      if (childNodes?.length) {
+        childNodes.forEach((n) => result.push(n));
+        break;
+      }
+      continue;
+    }
+
+    if (determineNode(node)) {
+      result.push(node);
+      break;
+    }
+  }
+
+  return result;
+};
+
+export const findFloorplanImageNode = (node: Konva.Node) =>
+  node.getClassName() === "Image" && node.getAttr("name") === "floor-plan__img";
+
+export const findPin = (pinName: string) => (node: Konva.Node) =>
+  node.getClassName() === "Image" && node.getAttr("name") === pinName;

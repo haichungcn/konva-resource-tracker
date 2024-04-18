@@ -7,12 +7,14 @@ interface Props {
   y: number;
   startingPosition: Vector2d;
   stageScale: Vector2d;
+  name: string;
 }
 
-const Pin = ({ x, y, stageScale }: Props) => {
+const Pin = ({ x, y, stageScale, name }: Props) => {
   const [image, status] = useImage(require("../dark_blue_pin.png"));
   return !!image && status === "loaded" ? (
     <Image
+      name={name}
       x={x}
       y={y}
       offsetX={40 / 2}
