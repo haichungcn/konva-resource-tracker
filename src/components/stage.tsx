@@ -1,4 +1,4 @@
-import { Stage, StageProps } from "react-konva";
+import { Stage, StageProps, Layer, Circle } from "react-konva";
 import Konva from "konva";
 import Controllers from "./controllers";
 import { forwardRef, useCallback, useRef, useState } from "react";
@@ -15,6 +15,7 @@ import {
   STAGE_WIDTH,
   STAGE_HEIGHT,
 } from "../constants";
+import { findNodes, findPin, findFloorplanImageNode } from "../utils";
 
 const getNewPositionRelativeToStageCenter = (
   stagePosition: Vector2d,
@@ -152,9 +153,37 @@ const ComposibleStage = ({ children }: Props) => {
   const handleOnDblClick = (e: KonvaEventObject<MouseEvent>) => {
     if (e.currentTarget instanceof Konva.Stage) {
       setScale(DEFAULT_SCALE);
-      e.currentTarget.setPosition(DEFAULT_POSITION);
+      setStagePosition(DEFAULT_POSITION);
     }
   };
+
+  const handleZoomToPin = () => {
+    if (!stage.current) return;
+    const pins = findNodes(stage.current, findPin("pin#15"));
+    if (!pins.length) return;
+    const stageRef = stage.current;
+    const pin = pins[0];
+    const scale = stageRef.scale()?.x ?? DEFAULT_SCALE.x;
+    const stageCenter = {
+      x: (stageRef.width() / 2 - stageRef.x()) / scale,
+      y: (stageRef.height() / 2 - stageRef.y()) / scale,
+    };
+    const relativePinPos = {
+      x: (pin.x() - stageRef.x()) / scale,
+      y: (pin.y() - stageRef.y()) / scale,
+    };
+    const newScale = 3;
+
+    setScale({ x: newScale, y: newScale });
+
+    const newPosition = {
+      x: stageCenter.x - relativePinPos.x * newScale,
+      y: stageCenter.y - relativePinPos.y * newScale,
+    };
+
+    setStagePosition(newPosition);
+  };
+
   return (
     <Container>
       <StyledStage
@@ -168,13 +197,32 @@ const ComposibleStage = ({ children }: Props) => {
         onMouseDown={handleOnMouseDown}
         onMouseUp={handleOnMouseUp}
         onDblClick={handleOnDblClick}
+        onDragEnd={() => {
+          if (!stage.current) return;
+          setStagePosition({
+            x: stage.current.x(),
+            y: stage.current.y(),
+          });
+        }}
         draggable
       >
-        {children({ startingPosition, setStartingPosition, scale })}
+        {children({ startingPosition, setStartingPosition, scale, stage })}
+        <Layer>
+          <Circle
+            name="stage-center"
+            x={STAGE_WIDTH / 2 - stagePosition.x}
+            y={STAGE_HEIGHT / 2 - stagePosition.y}
+            width={8}
+            height={8}
+            fill={"cyan"}
+            scale={{ x: 1 / scale.x, y: 1 / scale.y }}
+          />
+        </Layer>
       </StyledStage>
       <Controllers
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
+        onZoomToPin={handleZoomToPin}
         onResetZoom={() => setScale(DEFAULT_SCALE)}
         currentScale={scale.x.toFixed(1)}
       />

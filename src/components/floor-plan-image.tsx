@@ -58,6 +58,7 @@ const FloorPlanImage = ({ url, stageDimension, onImageLoad }: Props) => {
 
   return (
     <Image
+      name="floor-plan__img"
       image={image}
       width={imageDimension.width}
       height={imageDimension.height}

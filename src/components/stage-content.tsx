@@ -17,6 +17,7 @@ const StageContent = ({
   startingPosition,
   setStartingPosition,
   scale,
+  stage,
 }: StageChildrenProps) => {
   const floorplanDimension = useRef<Dimension | null>(null);
   const [floorplanStatus, setFloorplanStatus] = useState<ImageStatus>();
@@ -39,20 +40,21 @@ const StageContent = ({
       </Layer>
       <Layer>
         {floorplanStatus === "loaded" &&
-          pinArrays.map(({ x, y }) => (
+          pinArrays.map(({ x, y }, index) => (
             <>
               <Pin
                 x={startingPosition.x + x}
                 y={startingPosition.y + y}
                 startingPosition={startingPosition}
                 stageScale={scale}
+                name={`pin#${index}`}
               />
               <Circle
                 x={startingPosition.x + x}
                 y={startingPosition.y + y}
                 width={8}
                 height={8}
-                fill="red"
+                fill={index === 15 ? "green" : "red"}
                 scale={{ x: 1 / scale.x, y: 1 / scale.y }}
               />
             </>
