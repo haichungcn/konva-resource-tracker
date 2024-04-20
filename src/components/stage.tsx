@@ -15,7 +15,7 @@ import {
   STAGE_WIDTH,
   STAGE_HEIGHT,
 } from "../constants";
-import { findNodes, findPin, findFloorplanImageNode } from "../utils";
+import { findNodes, findPin } from "../utils";
 
 const getNewPositionRelativeToStageCenter = (
   stagePosition: Vector2d,
@@ -39,10 +39,11 @@ const getNewPositionRelativeToStageCenter = (
 };
 
 interface Props {
+  selectedPin: number;
   children: StageChildren;
 }
 
-const ComposibleStage = ({ children }: Props) => {
+const ComposibleStage = ({ selectedPin, children }: Props) => {
   const stage = useRef<Konva.Stage>(null);
 
   const [scale, setScale] = useState<Vector2d>(DEFAULT_SCALE);
@@ -159,7 +160,7 @@ const ComposibleStage = ({ children }: Props) => {
 
   const handleZoomToPin = () => {
     if (!stage.current) return;
-    const pins = findNodes(stage.current, findPin("pin#15"));
+    const pins = findNodes(stage.current, findPin(`pin#${selectedPin}`));
     if (!pins.length) return;
     const stageRef = stage.current;
     const pin = pins[0];
@@ -206,7 +207,13 @@ const ComposibleStage = ({ children }: Props) => {
         }}
         draggable
       >
-        {children({ startingPosition, setStartingPosition, scale, stage })}
+        {children({
+          startingPosition,
+          setStartingPosition,
+          scale,
+          stage,
+          selectedPin,
+        })}
         <Layer>
           <Circle
             name="stage-center"
@@ -225,6 +232,7 @@ const ComposibleStage = ({ children }: Props) => {
         onZoomToPin={handleZoomToPin}
         onResetZoom={() => setScale(DEFAULT_SCALE)}
         currentScale={scale.x.toFixed(1)}
+        selectedPin={selectedPin}
       />
     </Container>
   );

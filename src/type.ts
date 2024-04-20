@@ -18,6 +18,7 @@ export interface StageChildrenProps {
   setStartingPosition: (pos: Vector2d) => void;
   scale: Vector2d;
   stage: React.MutableRefObject<Konva.Stage | null>;
+  selectedPin: number;
 }
 
 export type StageChildren = (props: StageChildrenProps) => React.JSX.Element;

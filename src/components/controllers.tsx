@@ -7,6 +7,7 @@ interface Props {
   onResetZoom: () => void;
 
   currentScale: string;
+  selectedPin: number;
 }
 
 const Controllers = ({
@@ -14,12 +15,13 @@ const Controllers = ({
   onZoomOut,
   onZoomToPin,
   currentScale,
+  selectedPin,
 }: Props) => {
   return (
     <>
       <div style={{ position: "absolute", top: -42, left: 0 }}>
         <button className="zoom-to-pin_btn" onClick={onZoomToPin}>
-          Zoom to a pin 15 (green dot)
+          Zoom to a pin {selectedPin} (green dot)
         </button>
       </div>
       <Container>

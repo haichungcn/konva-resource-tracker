@@ -13,12 +13,19 @@ const getPinArrays = (floorplanDimension: Dimension | null) =>
       }))
     : [];
 
+interface Props {
+  pinURL: string;
+  floorplanURL?: string;
+}
+
 const StageContent = ({
   startingPosition,
   setStartingPosition,
   scale,
-  stage,
-}: StageChildrenProps) => {
+  pinURL,
+  floorplanURL = MOCK_FLOOR_URL,
+  selectedPin,
+}: StageChildrenProps & Props) => {
   const floorplanDimension = useRef<Dimension | null>(null);
   const [floorplanStatus, setFloorplanStatus] = useState<ImageStatus>();
   const pinArrays = useMemo(
@@ -29,7 +36,7 @@ const StageContent = ({
     <>
       <Layer>
         <FloorPlanImage
-          url={MOCK_FLOOR_URL}
+          url={floorplanURL}
           stageDimension={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}
           onImageLoad={(initialState) => {
             setStartingPosition(initialState.startingPosition);
@@ -40,6 +47,7 @@ const StageContent = ({
       </Layer>
       <Layer>
         {floorplanStatus === "loaded" &&
+          !!pinURL &&
           pinArrays.map(({ x, y }, index) => (
             <>
               <Pin
@@ -48,13 +56,14 @@ const StageContent = ({
                 startingPosition={startingPosition}
                 stageScale={scale}
                 name={`pin#${index}`}
+                url={pinURL}
               />
               <Circle
                 x={startingPosition.x + x}
                 y={startingPosition.y + y}
                 width={8}
                 height={8}
-                fill={index === 15 ? "green" : "red"}
+                fill={index === selectedPin ? "green" : "red"}
                 scale={{ x: 1 / scale.x, y: 1 / scale.y }}
               />
             </>
