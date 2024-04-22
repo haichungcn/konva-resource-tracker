@@ -4,19 +4,31 @@ import StageContent from "./stage-content";
 
 interface Props {
   selectedPin: number;
+  activePin: number | null;
   floorplanURL: string;
   pinURL: string;
+  enableTooltip: boolean;
+  enableGrid: boolean;
 }
 
-const ResourceTracker = ({ floorplanURL, pinURL, selectedPin }: Props) => {
+const ResourceTracker = ({
+  floorplanURL,
+  pinURL,
+  selectedPin,
+  activePin,
+  enableTooltip,
+  enableGrid,
+}: Props) => {
   return (
-    <ComposibleStage selectedPin={selectedPin}>
+    <ComposibleStage activePin={activePin} enableTooltip={enableTooltip}>
       {(props: StageChildrenProps) => {
         return (
           <StageContent
             {...props}
             floorplanURL={floorplanURL}
             pinURL={pinURL}
+            selectedPin={selectedPin}
+            enableGrid={enableGrid}
           />
         );
       }}

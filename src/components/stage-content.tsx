@@ -1,13 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import { Layer, Circle } from "react-konva";
-import { MOCK_FLOOR_URL, STAGE_WIDTH, STAGE_HEIGHT } from "../constants";
+import { STAGE_WIDTH, STAGE_HEIGHT } from "../constants";
 import { Dimension, ImageStatus, StageChildrenProps } from "../type";
 import FloorPlanImage from "./floor-plan-image";
+import Grid from "./grid";
 import Pin from "./pin";
 
 const getPinArrays = (floorplanDimension: Dimension | null) =>
   !!floorplanDimension
-    ? Array.from({ length: 20 }, () => ({
+    ? Array.from({ length: Math.floor(Math.random() * 100 + 20) }, () => ({
         x: Math.random() * floorplanDimension.width,
         y: Math.random() * floorplanDimension.height,
       }))
@@ -16,6 +17,8 @@ const getPinArrays = (floorplanDimension: Dimension | null) =>
 interface Props {
   pinURL: string;
   floorplanURL?: string;
+  selectedPin: number;
+  enableGrid: boolean;
 }
 
 const StageContent = ({
@@ -23,8 +26,9 @@ const StageContent = ({
   setStartingPosition,
   scale,
   pinURL,
-  floorplanURL = MOCK_FLOOR_URL,
+  floorplanURL,
   selectedPin,
+  enableGrid,
 }: StageChildrenProps & Props) => {
   const floorplanDimension = useRef<Dimension | null>(null);
   const [floorplanStatus, setFloorplanStatus] = useState<ImageStatus>();
@@ -35,15 +39,17 @@ const StageContent = ({
   return (
     <>
       <Layer>
-        <FloorPlanImage
-          url={floorplanURL}
-          stageDimension={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}
-          onImageLoad={(initialState) => {
-            setStartingPosition(initialState.startingPosition);
-            floorplanDimension.current = initialState.startingDimension;
-            setFloorplanStatus(initialState.status);
-          }}
-        />
+        {!!floorplanURL && (
+          <FloorPlanImage
+            url={floorplanURL}
+            stageDimension={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}
+            onImageLoad={(initialState) => {
+              setStartingPosition(initialState.startingPosition);
+              floorplanDimension.current = initialState.startingDimension;
+              setFloorplanStatus(initialState.status);
+            }}
+          />
+        )}
       </Layer>
       <Layer>
         {floorplanStatus === "loaded" &&
@@ -69,6 +75,15 @@ const StageContent = ({
             </>
           ))}
       </Layer>
+      {enableGrid &&
+        floorplanStatus === "loaded" &&
+        floorplanDimension.current && (
+          <Grid
+            startingPoint={startingPosition}
+            imageDimension={floorplanDimension.current}
+            scale={scale}
+          />
+        )}
     </>
   );
 };

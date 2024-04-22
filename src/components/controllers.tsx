@@ -3,32 +3,16 @@ import styled from "styled-components";
 interface Props {
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onZoomToPin: () => void;
   onResetZoom: () => void;
-
-  currentScale: string;
-  selectedPin: number;
 }
 
-const Controllers = ({
-  onZoomIn,
-  onZoomOut,
-  onZoomToPin,
-  currentScale,
-  selectedPin,
-}: Props) => {
+const Controllers = ({ onZoomIn, onZoomOut }: Props) => {
   return (
     <>
-      <div style={{ position: "absolute", top: -42, left: 0 }}>
-        <button className="zoom-to-pin_btn" onClick={onZoomToPin}>
-          Zoom to a pin {selectedPin} (green dot)
-        </button>
-      </div>
       <Container>
         <button onClick={onZoomIn}>+</button>
         <button onClick={onZoomOut}>-</button>
       </Container>
-      <div>Current Zoom Level: {currentScale}, Double Click to reset</div>
     </>
   );
 };

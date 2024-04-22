@@ -1,8 +1,6 @@
 import { Vector2d } from "konva/lib/types";
 import { ScaleLimit } from "./type";
 
-export const MOCK_FLOOR_URL =
-  "https://meatsciences.cals.wisc.edu/wp-content/uploads/sites/371/2016/02/Level-1-Floor-Plan.png";
 export const STAGE_WIDTH = 900;
 export const STAGE_HEIGHT = 800;
 export const ZOOM_STEP = 0.2;

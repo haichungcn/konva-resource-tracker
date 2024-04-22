@@ -1,7 +1,14 @@
-import { Stage, StageProps, Layer, Circle } from "react-konva";
+import { Stage, StageProps, Layer, Circle, Text } from "react-konva";
 import Konva from "konva";
 import Controllers from "./controllers";
-import { forwardRef, useCallback, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
 import { debounce } from "lodash";
 import { Vector2d } from "konva/lib/types";
 import { KonvaEventObject } from "konva/lib/Node";
@@ -39,12 +46,14 @@ const getNewPositionRelativeToStageCenter = (
 };
 
 interface Props {
-  selectedPin: number;
+  activePin: number | null;
   children: StageChildren;
+  enableTooltip: boolean;
 }
 
-const ComposibleStage = ({ selectedPin, children }: Props) => {
+const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
   const stage = useRef<Konva.Stage>(null);
+  const tooltip = useRef<Konva.Text>(null);
 
   const [scale, setScale] = useState<Vector2d>(DEFAULT_SCALE);
   const [scaleLimit, setScaleLimit] = useState<ScaleLimit>(SCALE_LIMIT);
@@ -52,6 +61,7 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
     useState<Vector2d>(DEFAULT_POSITION);
   const [startingPosition, setStartingPosition] =
     useState<Vector2d>(DEFAULT_POSITION);
+  const [tooltipVisible, setTooltipVisible] = useState<boolean>(false);
 
   const adjustNewPosition = (newScale: Vector2d) => {
     if (!stage.current) return;
@@ -81,6 +91,7 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
     }, 100),
     [scaleLimit],
   );
+
   const handleZoomOut = useCallback(
     debounce(() => {
       const getNewScale = (prev: Vector2d) => ({
@@ -96,6 +107,7 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
     }, 100),
     [scaleLimit],
   );
+
   const handleOnMouseWheel = useCallback(
     (e: KonvaEventObject<WheelEvent>) => {
       // stop default scrolling
@@ -139,6 +151,31 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
     [scaleLimit],
   );
 
+  const handleOnMouseMove = (e: KonvaEventObject<MouseEvent>) => {
+    if (
+      enableTooltip &&
+      e.currentTarget instanceof Konva.Stage &&
+      !!tooltip.current
+    ) {
+      const stage = e.currentTarget;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const pointerPos = {
+        x: (pointer.x + 5 - stage.x()) / scale.x,
+        y: (pointer.y + 5 - stage.y()) / scale.y,
+      };
+      tooltip.current.setPosition(pointerPos);
+      tooltip.current.setText(
+        `${pointerPos.x.toFixed(2)}x${pointerPos.y.toFixed(2)}`,
+      );
+      setTooltipVisible(true);
+    }
+  };
+
+  const handleOnMouseLeave = () => {
+    setTooltipVisible(false);
+  };
+
   const handleOnMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     if (e.currentTarget instanceof Konva.Stage) {
       e.currentTarget.container().style.cursor = "grabbing";
@@ -158,9 +195,9 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
     }
   };
 
-  const handleZoomToPin = () => {
+  const handleZoomToPin = (pinIdx: number) => {
     if (!stage.current) return;
-    const pins = findNodes(stage.current, findPin(`pin#${selectedPin}`));
+    const pins = findNodes(stage.current, findPin(`pin#${pinIdx}`));
     if (!pins.length) return;
     const stageRef = stage.current;
     const pin = pins[0];
@@ -185,6 +222,18 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
     setStagePosition(newPosition);
   };
 
+  const handleOnDragEnd = () => {
+    if (!stage.current) return;
+    setStagePosition({
+      x: stage.current.x(),
+      y: stage.current.y(),
+    });
+  };
+
+  useEffect(() => {
+    if (!!activePin) handleZoomToPin(activePin);
+  }, [activePin]);
+
   return (
     <Container>
       <StyledStage
@@ -195,16 +244,12 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
         y={stagePosition.y}
         scale={scale}
         onWheel={handleOnMouseWheel}
+        onMouseMove={handleOnMouseMove}
+        onMouseLeave={handleOnMouseLeave}
         onMouseDown={handleOnMouseDown}
         onMouseUp={handleOnMouseUp}
         onDblClick={handleOnDblClick}
-        onDragEnd={() => {
-          if (!stage.current) return;
-          setStagePosition({
-            x: stage.current.x(),
-            y: stage.current.y(),
-          });
-        }}
+        onDragEnd={handleOnDragEnd}
         draggable
       >
         {children({
@@ -212,9 +257,17 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
           setStartingPosition,
           scale,
           stage,
-          selectedPin,
         })}
         <Layer>
+          <Circle
+            name="starting-position"
+            x={startingPosition.x}
+            y={startingPosition.y}
+            width={8}
+            height={8}
+            fill={"pink"}
+            scale={{ x: 1 / scale.x, y: 1 / scale.y }}
+          />
           <Circle
             name="stage-center"
             x={STAGE_WIDTH / 2 - stagePosition.x}
@@ -224,16 +277,30 @@ const ComposibleStage = ({ selectedPin, children }: Props) => {
             fill={"cyan"}
             scale={{ x: 1 / scale.x, y: 1 / scale.y }}
           />
+          {enableTooltip && (
+            <Text
+              name="tooltip"
+              ref={tooltip}
+              fontSize={12}
+              padding={5}
+              fill={"red"}
+              alpha={0.75}
+              visible={tooltipVisible}
+            />
+          )}
         </Layer>
       </StyledStage>
       <Controllers
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onZoomToPin={handleZoomToPin}
         onResetZoom={() => setScale(DEFAULT_SCALE)}
-        currentScale={scale.x.toFixed(1)}
-        selectedPin={selectedPin}
       />
+      <InfoPanel>
+        <div>
+          Current Zoom Level: <b>{scale.x.toFixed(1)}</b>
+        </div>
+        <div>Double Click to reset</div>
+      </InfoPanel>
     </Container>
   );
 };
@@ -259,4 +326,13 @@ const StyledStage = styled(
   cursor: grab;
   cursor: -moz-grab;
   cursor: -webkit-grab;
+`;
+
+const InfoPanel = styled.div`
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  text-align: left;
+  font-size: 12px;
+  color: grey;
 `;
