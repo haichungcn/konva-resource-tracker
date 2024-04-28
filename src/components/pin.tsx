@@ -9,9 +9,10 @@ interface Props {
   stageScale: Vector2d;
   name: string;
   url: string;
+  strokeEnabled?: boolean;
 }
 
-const Pin = ({ x, y, stageScale, url, name }: Props) => {
+const Pin = ({ x, y, stageScale, url, name, strokeEnabled }: Props) => {
   const [image, status] = useImage(url);
 
   return !!image && status === "loaded" ? (
@@ -26,6 +27,7 @@ const Pin = ({ x, y, stageScale, url, name }: Props) => {
         width={40}
         height={40}
         scale={{ x: 1 / stageScale.x, y: 1 / stageScale.y }}
+        strokeEnabled={strokeEnabled}
       />
 
       <Circle
