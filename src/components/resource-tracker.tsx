@@ -7,6 +7,7 @@ interface Props {
   activePin: number | null;
   floorplanURL: string;
   pinURL: string;
+  groupPinURL: string;
   enableTooltip: boolean;
   enableGrid: boolean;
 }
@@ -14,6 +15,7 @@ interface Props {
 const ResourceTracker = ({
   floorplanURL,
   pinURL,
+  groupPinURL,
   selectedPin,
   activePin,
   enableTooltip,
@@ -27,6 +29,7 @@ const ResourceTracker = ({
             {...props}
             floorplanURL={floorplanURL}
             pinURL={pinURL}
+            groupPinURL={groupPinURL}
             selectedPin={selectedPin}
             enableGrid={enableGrid}
           />

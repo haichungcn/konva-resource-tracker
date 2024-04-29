@@ -69,7 +69,8 @@ export default function App() {
 
       <ResourceTracker
         floorplanURL={floorplanURL}
-        pinURL={require("./images/dark_blue_pin.png")}
+        pinURL={require("./images/aurapin-noavatar.png")}
+        groupPinURL={require("./images/aurapin-group.png")}
         selectedPin={SELECTED_PIN}
         activePin={activePin}
         enableTooltip={showTooltip}

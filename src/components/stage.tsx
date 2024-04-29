@@ -76,10 +76,10 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
   };
 
   const handleZoomIn = useCallback(
-    debounce(() => {
+    debounce((targetScale?: Vector2d) => {
       const getNewScale = (prev: Vector2d) => ({
-        x: Math.min(prev.x + ZOOM_STEP, scaleLimit.MAX),
-        y: Math.min(prev.y + ZOOM_STEP, scaleLimit.MAX),
+        x: Math.min(targetScale?.x ?? prev.x + ZOOM_STEP, scaleLimit.MAX),
+        y: Math.min(targetScale?.y ?? prev.y + ZOOM_STEP, scaleLimit.MAX),
       });
       setScale((prev) => {
         return getNewScale(prev);
@@ -257,6 +257,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
           setStartingPosition,
           scale,
           stage,
+          onZoomIn: handleZoomIn,
         })}
         <Layer>
           <Circle

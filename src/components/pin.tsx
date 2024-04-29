@@ -1,3 +1,4 @@
+import { KonvaEventObject } from "konva/lib/Node";
 import { Vector2d } from "konva/lib/types";
 import { Circle, Image } from "react-konva";
 import useImage from "use-image";
@@ -10,9 +11,18 @@ interface Props {
   name: string;
   url: string;
   strokeEnabled?: boolean;
+  onMouseOver?: (e: KonvaEventObject<MouseEvent>) => void;
 }
 
-const Pin = ({ x, y, stageScale, url, name, strokeEnabled }: Props) => {
+const Pin = ({
+  x,
+  y,
+  stageScale,
+  url,
+  name,
+  strokeEnabled,
+  onMouseOver,
+}: Props) => {
   const [image, status] = useImage(url);
 
   return !!image && status === "loaded" ? (
@@ -21,13 +31,14 @@ const Pin = ({ x, y, stageScale, url, name, strokeEnabled }: Props) => {
         name={name}
         x={x}
         y={y}
-        offsetX={40 / 2}
-        offsetY={40}
+        offsetX={47 / 2}
+        offsetY={58}
         image={image}
-        width={40}
-        height={40}
+        width={47}
+        height={58}
         scale={{ x: 1 / stageScale.x, y: 1 / stageScale.y }}
         strokeEnabled={strokeEnabled}
+        onMouseOver={onMouseOver}
       />
 
       <Circle
