@@ -58,15 +58,17 @@ const StageContent = ({
           />
         )}
       </Layer>
-      <PinLayers
-        pinURL={pinURL}
-        groupPinURL={groupPinURL}
-        scale={scale}
-        startingPosition={startingPosition}
-        floorplanStatus={floorplanStatus}
-        pinArrays={pinArrays}
-        onZoomIn={onZoomIn}
-      />
+      {!!pinArrays.length && (
+        <PinLayers
+          pinURL={pinURL}
+          groupPinURL={groupPinURL}
+          scale={scale}
+          startingPosition={startingPosition}
+          floorplanStatus={floorplanStatus}
+          pinArrays={pinArrays}
+          onZoomIn={onZoomIn}
+        />
+      )}
       {enableGrid &&
         floorplanStatus === "loaded" &&
         floorplanDimension.current && (

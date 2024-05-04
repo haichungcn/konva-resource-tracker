@@ -1,6 +1,7 @@
 import Konva from "konva";
 import { Vector2d } from "konva/lib/types";
 import { mean } from "lodash";
+import { SCALE_LIMIT, ZOOM_STEP } from "./constants";
 import { GroupItem, PinItem } from "./type";
 
 export const calculateOptimalScaleRatio = (
@@ -74,9 +75,28 @@ export const findPin = (pinName: string) => (node: Konva.Node) =>
 
 export const isCollapsed = (a: PinItem, b: PinItem, scale: Vector2d) => {
   const { x: aX, y: aY, width: aW, height: aH } = a;
+  const { x: bX, y: bY } = b; // assuming a & b have the same width and height
+  return (
+    Math.abs(aX - bX) * scale.x < aW / 1.75 &&
+    Math.abs(aY - bY) * scale.y < aH / 2
+  );
+};
+
+export const nearestDivisible = (num: number, divisor: number) => {
+  return Math.round(num / divisor) * divisor;
+};
+
+export const calculateNonCollapsedScale = (a: PinItem, b: PinItem) => {
+  const { x: aX, y: aY, width: aW, height: aH } = a;
   const { x: bX, y: bY } = b;
-  const distance = Math.hypot((bX - aX) * scale.x, (bY - aY) * scale.y);
-  return distance < Math.max(aW / 3, aH / 3);
+  const nonCollapsedDistance = Math.max(aW, aH);
+  let result = SCALE_LIMIT.MAX;
+  result = nonCollapsedDistance / Math.hypot(bX - aX, bY - aY);
+  result = Math.min(
+    SCALE_LIMIT.MAX,
+    Number(nearestDivisible(result, ZOOM_STEP).toFixed(1)),
+  );
+  return result;
 };
 
 export const groupPins = (pins: PinItem[], scale: Vector2d): GroupItem[] => {
@@ -84,12 +104,24 @@ export const groupPins = (pins: PinItem[], scale: Vector2d): GroupItem[] => {
   const remaining: PinItem[] = [...pins];
 
   while (remaining.length > 0) {
+    let unGroupScale = SCALE_LIMIT.MIN; // optimal zoom scale to show all children
     const current = remaining.shift();
+
     if (!current) break;
+
     const group: PinItem[] = [current];
+
     for (let i = remaining.length - 1; i >= 0; i--) {
-      if (isCollapsed(current, remaining[i], scale)) {
+      if (
+        scale.x !== SCALE_LIMIT.MAX && // on maximum zoom, show all pins
+        isCollapsed(current, remaining[i], scale)
+      ) {
         group.push(remaining[i]);
+        const newUnGroupScale = calculateNonCollapsedScale(
+          current,
+          remaining[i],
+        );
+        if (newUnGroupScale > unGroupScale) unGroupScale = newUnGroupScale;
         remaining.splice(i, 1);
       }
     }
@@ -98,15 +130,17 @@ export const groupPins = (pins: PinItem[], scale: Vector2d): GroupItem[] => {
     const avgX = mean(group.map((i) => i.x));
     const avgY = mean(group.map((i) => i.y));
 
-    // Push the average coordinates and group size to the groupedMarkers array
+    // Push the average coordinates and group size to the groups array
     groups.push({
       x: avgX,
       y: avgY,
       size: group.length,
       children: group,
-      unGroupScale: scale.x, //  TODO: calculate this
+      unGroupScale,
     });
   }
 
   return groups;
 };
+
+export const roundNumber = (num: number) => Number(num.toFixed(1));

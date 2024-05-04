@@ -1,12 +1,12 @@
 import Konva from "konva";
 import { KonvaEventObject } from "konva/lib/Node";
-import { useEffect, useRef, useState } from "react";
-import { Circle, Layer, Group, Text } from "react-konva";
-import { SCALE_LIMIT, ZOOM_STEP } from "../constants";
+import { useMemo, useRef } from "react";
+import { Circle, Layer, Group, Text, Rect } from "react-konva";
+import { ZOOM_STEP } from "../constants";
 import Pin from "./pin";
 import { GroupItem, PinItem, StageChildrenProps } from "../type";
 import { groupPins } from "../utils";
-import { pick } from "lodash";
+import { isEqual, pick } from "lodash";
 
 interface Props
   extends Pick<StageChildrenProps, "scale" | "startingPosition" | "onZoomIn"> {
@@ -26,31 +26,37 @@ const PinLayers = ({
   onZoomIn,
 }: Props) => {
   const groupLayer = useRef<Konva.Layer>(null);
+  const lastChangeCount = useRef<number>(0);
+  const changeCount = useRef<number>(0);
+  const pinArraysRef = useRef<typeof pinArrays>([]);
+  const groupByScales = useRef<{ [key: number]: GroupItem[] }>({});
 
-  const [pinGroups, setPinGroups] = useState<GroupItem[]>([]);
+  const pinArraysUpdatedCount = useMemo(() => {
+    const isSame = isEqual(pinArrays, pinArraysRef.current);
+    if (!isSame) {
+      pinArraysRef.current = pinArrays;
+      changeCount.current += 1;
+    }
+    return changeCount.current;
+  }, [pinArrays]);
 
-  const handleOnMouseOverPinGroup = (e: KonvaEventObject<MouseEvent>) => {
-    e.evt.stopPropagation();
-    const stage = e.target.getStage();
-    if (stage) stage.container().style.cursor = "default";
-    const group = e.target.getParent();
-    if (group) group.zIndex(pinGroups.length + 100);
-  };
-
-  const handleOnMouseLeavePinGroup = (e: KonvaEventObject<MouseEvent>) => {
-    e.evt.stopPropagation();
-    const stage = e.target.getStage();
-    if (stage) stage.container().style.cursor = "grab";
-  };
-
-  useEffect(() => {
+  const pinGroups = useMemo(() => {
     if (
       !pinArrays.length ||
       !groupLayer.current ||
       !startingPosition.x ||
       floorplanStatus !== "loaded"
     )
-      return;
+      return [];
+
+    if (lastChangeCount.current !== changeCount.current) {
+      // invalidate cache
+      groupByScales.current = {};
+      lastChangeCount.current = changeCount.current;
+    }
+
+    // use cached data
+    if (groupByScales.current[scale.x]) return groupByScales.current[scale.x];
 
     // sort all pins based on x axis;
     const xSortedPins = pinArrays
@@ -61,10 +67,22 @@ const PinLayers = ({
       }))
       .sort((a, b) => a.x - b.x);
 
-    const groups = groupPins(xSortedPins, scale);
+    const groups = groupPins(xSortedPins, scale).sort(
+      (a, b) => a.size - b.size,
+    );
 
-    setPinGroups(groups.sort((a, b) => a.size - b.size));
-  }, [pinArrays, startingPosition, floorplanStatus, scale.x]);
+    // cache data
+    groupByScales.current[scale.x] = groups;
+
+    return groups;
+  }, [
+    pinArraysUpdatedCount,
+    startingPosition.x,
+    startingPosition.y,
+    floorplanStatus,
+    scale.x,
+    scale.y,
+  ]);
 
   return (
     <>
@@ -75,10 +93,21 @@ const PinLayers = ({
               <Group
                 key={index}
                 style={{ cursor: "text" }}
-                onMouseOver={handleOnMouseOverPinGroup}
-                onMouseLeave={handleOnMouseLeavePinGroup}
-                onClick={(e) => {
+                onMouseEnter={(e: KonvaEventObject<MouseEvent>) => {
                   e.evt.stopPropagation();
+                  const stage = e.target.getStage();
+                  if (stage) stage.container().style.cursor = "pointer";
+                  const group = e.target.getParent();
+                  if (group) group.zIndex(pinGroups.length);
+                }}
+                onMouseLeave={(e: KonvaEventObject<MouseEvent>) => {
+                  e.evt.stopPropagation();
+                  const stage = e.target.getStage();
+                  const group = e.target.getParent();
+                  if (!!group) group.zIndex(group.index);
+                  if (stage) stage.container().style.cursor = "grab";
+                }}
+                onClick={(e) => {
                   onZoomIn(
                     {
                       x: group.unGroupScale + ZOOM_STEP,
@@ -97,6 +126,27 @@ const PinLayers = ({
                   url={groupPinURL}
                   strokeEnabled
                 />
+                <Group>
+                  <Rect
+                    name="group-size"
+                    x={group.x + 4 / scale.x}
+                    y={group.y - 67 / scale.x}
+                    width={group.size < 10 ? 19 : 28}
+                    height={28}
+                    cornerRadius={10}
+                    fill="#3D55DF"
+                    scale={{ x: 1 / scale.x, y: 1 / scale.y }}
+                  />
+                  <Text
+                    x={group.x + 9 / scale.x}
+                    y={group.y - 60 / scale.x}
+                    text={group.size.toString()}
+                    scale={{ x: 1 / scale.x, y: 1 / scale.y }}
+                    fill="white"
+                    fontSize={16}
+                    fontWeight={700}
+                  />
+                </Group>
                 <Circle
                   name="group-anchor"
                   x={group.x}
@@ -106,28 +156,10 @@ const PinLayers = ({
                   fill="purple"
                   scale={{ x: 1 / scale.x, y: 1 / scale.y }}
                 />
-                <Circle
-                  name="group-size"
-                  x={group.x + 15 / scale.x}
-                  y={group.y - 52 / scale.x}
-                  width={28}
-                  height={28}
-                  cornerRadius={10}
-                  fill="#3D55DF"
-                  scale={{ x: 1 / scale.x, y: 1 / scale.y }}
-                />
-                <Text
-                  x={group.x + 11 / scale.x}
-                  y={group.y - 59 / scale.x}
-                  text={group.size.toString()}
-                  scale={{ x: 1 / scale.x, y: 1 / scale.y }}
-                  fill="white"
-                  fontSize={16}
-                  fontWeight={700}
-                />
               </Group>
             ) : (
               <Pin
+                key={index}
                 x={group.children[0].x}
                 y={group.children[0].y}
                 startingPosition={startingPosition}
@@ -136,7 +168,16 @@ const PinLayers = ({
                 url={pinURL}
                 strokeEnabled
                 onMouseOver={(e) => {
-                  e.target.zIndex(pinGroups.length + 100);
+                  e.target.zIndex(pinGroups.length);
+                }}
+                onClick={() => {
+                  onZoomIn(
+                    {
+                      x: 3,
+                      y: 3,
+                    },
+                    pick(group.children[0], ["x", "y"]),
+                  );
                 }}
               />
             ),

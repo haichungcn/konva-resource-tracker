@@ -13,6 +13,7 @@ interface Props {
   url: string;
   strokeEnabled?: boolean;
   onMouseOver?: (e: KonvaEventObject<MouseEvent>) => void;
+  onClick?: (e: KonvaEventObject<MouseEvent>) => void;
 }
 
 const Pin = ({
@@ -23,6 +24,7 @@ const Pin = ({
   name,
   strokeEnabled,
   onMouseOver,
+  onClick,
 }: Props) => {
   const [image, status] = useImage(url);
 
@@ -40,6 +42,7 @@ const Pin = ({
         scale={{ x: 1 / stageScale.x, y: 1 / stageScale.y }}
         strokeEnabled={strokeEnabled}
         onMouseOver={onMouseOver}
+        onClick={onClick}
       />
 
       <Circle

@@ -22,7 +22,7 @@ import {
   STAGE_WIDTH,
   STAGE_HEIGHT,
 } from "../constants";
-import { findNodes, findPin } from "../utils";
+import { findNodes, findPin, roundNumber } from "../utils";
 
 const getNewPositionRelativeToStageCenter = (
   stagePosition: Vector2d,
@@ -82,7 +82,8 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
         y: Math.min(prev.y + ZOOM_STEP, scaleLimit.MAX),
       });
       setScale((prev) => {
-        return getNewScale(prev);
+        const { x, y } = getNewScale(prev);
+        return { x: roundNumber(x), y: roundNumber(y) };
       });
 
       if (!!stage.current) {
@@ -99,7 +100,8 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
         y: Math.max(prev.y - ZOOM_STEP, scaleLimit.MIN),
       });
       setScale((prev) => {
-        return getNewScale(prev);
+        const { x, y } = getNewScale(prev);
+        return { x: roundNumber(x), y: roundNumber(y) };
       });
       if (!!stage.current) {
         adjustNewPosition(getNewScale(stage.current.scale() ?? DEFAULT_SCALE));
@@ -139,7 +141,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
             ? Math.min(oldScale + ZOOM_STEP, scaleLimit.MAX)
             : Math.max(oldScale - ZOOM_STEP, scaleLimit.MIN);
 
-        setScale({ x: newScale, y: newScale });
+        setScale({ x: roundNumber(newScale), y: roundNumber(newScale) });
 
         const newPos = {
           x: pointer.x - mousePointTo.x * newScale,
@@ -160,33 +162,32 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
     handleZoomInTo(scale, { x: 3, y: 3 }, pin.getPosition());
   };
 
-  const handleZoomInTo = (
-    oldScale: Vector2d,
-    newScale: Vector2d,
-    targetPoint: Vector2d,
-  ) => {
-    if (!stage.current) return;
+  const handleZoomInTo = useCallback(
+    (oldScale: Vector2d, newScale: Vector2d, targetPoint: Vector2d) => {
+      if (!stage.current) return;
 
-    const stageRef = stage.current;
+      const stageRef = stage.current;
 
-    const stageCenter = {
-      x: (stageRef.width() / 2 - stageRef.x()) / oldScale.x,
-      y: (stageRef.height() / 2 - stageRef.y()) / oldScale.y,
-    };
-    const relativeTargetPos = {
-      x: (targetPoint.x - stageRef.x()) / oldScale.x,
-      y: (targetPoint.y - stageRef.y()) / oldScale.y,
-    };
+      const stageCenter = {
+        x: (stageRef.width() / 2 - stageRef.x()) / oldScale.x,
+        y: (stageRef.height() / 2 - stageRef.y()) / oldScale.y,
+      };
+      const relativeTargetPos = {
+        x: (targetPoint.x - stageRef.x()) / oldScale.x,
+        y: (targetPoint.y - stageRef.y()) / oldScale.y,
+      };
 
-    setScale({ x: newScale.x, y: newScale.y });
+      setScale({ x: roundNumber(newScale.x), y: roundNumber(newScale.y) });
 
-    const newPosition = {
-      x: stageCenter.x - relativeTargetPos.x * newScale.x,
-      y: stageCenter.y - relativeTargetPos.y * newScale.y,
-    };
+      const newPosition = {
+        x: stageCenter.x - relativeTargetPos.x * newScale.x,
+        y: stageCenter.y - relativeTargetPos.y * newScale.y,
+      };
 
-    setStagePosition(newPosition);
-  };
+      setStagePosition(newPosition);
+    },
+    [],
+  );
 
   const handleOnMouseMove = (e: KonvaEventObject<MouseEvent>) => {
     if (
@@ -226,7 +227,10 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
   };
 
   const handleOnDblClick = (e: KonvaEventObject<MouseEvent>) => {
-    if (e.currentTarget instanceof Konva.Stage) {
+    if (
+      e.target instanceof Konva.Stage ||
+      e.target.name() === "floor-plan__img"
+    ) {
       setScale(DEFAULT_SCALE);
       setStagePosition(DEFAULT_POSITION);
     }
