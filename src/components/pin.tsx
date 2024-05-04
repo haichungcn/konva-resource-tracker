@@ -2,6 +2,7 @@ import { KonvaEventObject } from "konva/lib/Node";
 import { Vector2d } from "konva/lib/types";
 import { Circle, Image } from "react-konva";
 import useImage from "use-image";
+import { PIN_HEIGHT, PIN_WIDTH } from "../constants";
 
 interface Props {
   x: number;
@@ -31,11 +32,11 @@ const Pin = ({
         name={name}
         x={x}
         y={y}
-        offsetX={47 / 2}
-        offsetY={58}
+        offsetX={PIN_WIDTH / 2}
+        offsetY={PIN_HEIGHT}
         image={image}
-        width={47}
-        height={58}
+        width={PIN_WIDTH}
+        height={PIN_HEIGHT}
         scale={{ x: 1 / stageScale.x, y: 1 / stageScale.y }}
         strokeEnabled={strokeEnabled}
         onMouseOver={onMouseOver}

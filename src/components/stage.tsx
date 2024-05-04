@@ -55,7 +55,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
   const stage = useRef<Konva.Stage>(null);
   const tooltip = useRef<Konva.Text>(null);
 
-  const [scale, setScale] = useState<Vector2d>(DEFAULT_SCALE);
+  const [oldScale, setScale] = useState<Vector2d>(DEFAULT_SCALE);
   const [scaleLimit, setScaleLimit] = useState<ScaleLimit>(SCALE_LIMIT);
   const [stagePosition, setStagePosition] =
     useState<Vector2d>(DEFAULT_POSITION);
@@ -76,10 +76,10 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
   };
 
   const handleZoomIn = useCallback(
-    debounce((targetScale?: Vector2d) => {
+    debounce(() => {
       const getNewScale = (prev: Vector2d) => ({
-        x: Math.min(targetScale?.x ?? prev.x + ZOOM_STEP, scaleLimit.MAX),
-        y: Math.min(targetScale?.y ?? prev.y + ZOOM_STEP, scaleLimit.MAX),
+        x: Math.min(prev.x + ZOOM_STEP, scaleLimit.MAX),
+        y: Math.min(prev.y + ZOOM_STEP, scaleLimit.MAX),
       });
       setScale((prev) => {
         return getNewScale(prev);
@@ -151,6 +151,43 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
     [scaleLimit],
   );
 
+  const handleZoomToPin = (pinIdx: number) => {
+    if (!stage.current) return;
+    const pins = findNodes(stage.current, findPin(`pin#${pinIdx}`));
+    if (!pins.length) return;
+    const pin = pins[0];
+    const scale = stage.current.scale() ?? DEFAULT_SCALE;
+    handleZoomInTo(scale, { x: 3, y: 3 }, pin.getPosition());
+  };
+
+  const handleZoomInTo = (
+    oldScale: Vector2d,
+    newScale: Vector2d,
+    targetPoint: Vector2d,
+  ) => {
+    if (!stage.current) return;
+
+    const stageRef = stage.current;
+
+    const stageCenter = {
+      x: (stageRef.width() / 2 - stageRef.x()) / oldScale.x,
+      y: (stageRef.height() / 2 - stageRef.y()) / oldScale.y,
+    };
+    const relativeTargetPos = {
+      x: (targetPoint.x - stageRef.x()) / oldScale.x,
+      y: (targetPoint.y - stageRef.y()) / oldScale.y,
+    };
+
+    setScale({ x: newScale.x, y: newScale.y });
+
+    const newPosition = {
+      x: stageCenter.x - relativeTargetPos.x * newScale.x,
+      y: stageCenter.y - relativeTargetPos.y * newScale.y,
+    };
+
+    setStagePosition(newPosition);
+  };
+
   const handleOnMouseMove = (e: KonvaEventObject<MouseEvent>) => {
     if (
       enableTooltip &&
@@ -161,8 +198,8 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
       const pointerPos = {
-        x: (pointer.x + 5 - stage.x()) / scale.x,
-        y: (pointer.y + 5 - stage.y()) / scale.y,
+        x: (pointer.x + 5 - stage.x()) / oldScale.x,
+        y: (pointer.y + 5 - stage.y()) / oldScale.y,
       };
       tooltip.current.setPosition(pointerPos);
       tooltip.current.setText(
@@ -195,33 +232,6 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
     }
   };
 
-  const handleZoomToPin = (pinIdx: number) => {
-    if (!stage.current) return;
-    const pins = findNodes(stage.current, findPin(`pin#${pinIdx}`));
-    if (!pins.length) return;
-    const stageRef = stage.current;
-    const pin = pins[0];
-    const scale = stageRef.scale()?.x ?? DEFAULT_SCALE.x;
-    const stageCenter = {
-      x: (stageRef.width() / 2 - stageRef.x()) / scale,
-      y: (stageRef.height() / 2 - stageRef.y()) / scale,
-    };
-    const relativePinPos = {
-      x: (pin.x() - stageRef.x()) / scale,
-      y: (pin.y() - stageRef.y()) / scale,
-    };
-    const newScale = 3;
-
-    setScale({ x: newScale, y: newScale });
-
-    const newPosition = {
-      x: stageCenter.x - relativePinPos.x * newScale,
-      y: stageCenter.y - relativePinPos.y * newScale,
-    };
-
-    setStagePosition(newPosition);
-  };
-
   const handleOnDragEnd = () => {
     if (!stage.current) return;
     setStagePosition({
@@ -242,7 +252,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
         height={STAGE_HEIGHT}
         x={stagePosition.x}
         y={stagePosition.y}
-        scale={scale}
+        scale={oldScale}
         onWheel={handleOnMouseWheel}
         onMouseMove={handleOnMouseMove}
         onMouseLeave={handleOnMouseLeave}
@@ -255,9 +265,14 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
         {children({
           startingPosition,
           setStartingPosition,
-          scale,
+          scale: oldScale,
           stage,
-          onZoomIn: handleZoomIn,
+          onZoomIn: (targetScale, targetPosition) =>
+            handleZoomInTo(
+              stage.current?.scale() ?? DEFAULT_SCALE,
+              targetScale,
+              targetPosition,
+            ),
         })}
         <Layer>
           <Circle
@@ -267,7 +282,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
             width={8}
             height={8}
             fill={"pink"}
-            scale={{ x: 1 / scale.x, y: 1 / scale.y }}
+            scale={{ x: 1 / oldScale.x, y: 1 / oldScale.y }}
           />
           <Circle
             name="stage-center"
@@ -276,7 +291,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
             width={8}
             height={8}
             fill={"cyan"}
-            scale={{ x: 1 / scale.x, y: 1 / scale.y }}
+            scale={{ x: 1 / oldScale.x, y: 1 / oldScale.y }}
           />
           {enableTooltip && (
             <Text
@@ -298,7 +313,7 @@ const ComposibleStage = ({ activePin, enableTooltip, children }: Props) => {
       />
       <InfoPanel>
         <div>
-          Current Zoom Level: <b>{scale.x.toFixed(1)}</b>
+          Current Zoom Level: <b>{oldScale.x.toFixed(1)}</b>
         </div>
         <div>Double Click to reset</div>
       </InfoPanel>
