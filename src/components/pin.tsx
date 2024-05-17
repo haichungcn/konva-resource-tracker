@@ -40,7 +40,7 @@ const Pin = ({
         width={PIN_WIDTH}
         height={PIN_HEIGHT}
         scale={{ x: 1 / stageScale.x, y: 1 / stageScale.y }}
-        strokeEnabled={strokeEnabled}
+        strokeEnabled={true}
         onMouseOver={onMouseOver}
         onClick={onClick}
       />
